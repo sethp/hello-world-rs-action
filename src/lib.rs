@@ -14,7 +14,7 @@ try {
   const time = (new Date()).toTimeString();
   core.setOutput("time", time);
   // Get the JSON webhook payload for the event that triggered the workflow
-  const payload = JSON.stringify(github.context, undefined, 2)
+  const payload = JSON.stringify(github.context.payload, undefined, 2)
   console.log(`The event payload: ${payload}`);
 } catch (error) {
   core.setFailed(error.message);
@@ -25,12 +25,15 @@ use std::error::Error;
 
 pub type Result = std::result::Result<(), Box<dyn Error>>;
 
+// TODO: The `catch (error) { core.setFailed(..) }` is nearly implicit,
+// but the `::error::message` part is still to do
+
 pub fn run() -> Result {
     let nameToGreet = core::getInput("who-to-greet")?;
     println!("Hello {}!", nameToGreet);
     let time = Utc::now().to_rfc3339();
     core::setOutput("time", &time);
-    let payload = serde_json::to_string_pretty(&github::get_context_magic()?)?;
+    let payload = serde_json::to_string_pretty(&github::get_context_payload_magic()?)?;
     println!("The event payload: {}", payload);
     Ok(())
 }
@@ -53,7 +56,7 @@ pub mod github {
     use std::fs::File;
     use std::io::BufReader;
 
-    pub fn get_context_magic() -> std::result::Result<JsonValue, Box<dyn Error>> {
+    pub fn get_context_payload_magic() -> std::result::Result<JsonValue, Box<dyn Error>> {
         let path = env::var("GITHUB_EVENT_PATH")?;
         let file = File::open(path)?;
         let reader = BufReader::new(file);
