@@ -1,0 +1,4 @@
+[submodule "node-sys"]
+	path = node-sys
+	url = https://github.com/sethp/node-sys.git
+	branch = feat/read-file-sync

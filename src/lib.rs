@@ -21,54 +21,166 @@ try {
 }
  */
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+extern crate web_sys;
+
 use std::error::Error;
 
 pub type Result = std::result::Result<(), Box<dyn Error>>;
 
+#[cfg(target_arch = "wasm32")]
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        println!( $( $t )* );
+    }
+}
+
 // TODO: The `catch (error) { core.setFailed(..) }` is nearly implicit,
 // but the `::error::message` part is still to do
+#[cfg(target_arch = "wasm32")]
+// TODO: this segfaults on panic?
+#[wasm_bindgen]
+pub fn main() {
+    console_error_panic_hook::set_once();
+    if let Err(e) = run() {
+        log!("Failed: {}", e)
+        // TODO exit 1
+    }
+}
 
 pub fn run() -> Result {
     let nameToGreet = core::getInput("who-to-greet")?;
-    println!("Hello {}!", nameToGreet);
+    log!("Hello {}!", nameToGreet);
     let time = Utc::now().to_rfc3339();
     core::setOutput("time", &time);
     let payload = serde_json::to_string_pretty(&github::get_context_payload_magic()?)?;
-    println!("The event payload: {}", payload);
+    log!("The event payload: {}", payload);
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub mod env {
+    use js_sys::Reflect;
+    use node_sys::process;
+    use wasm_bindgen::JsValue;
+
+    #[derive(Debug)]
+    pub enum VarError {
+        NotPresent(String),
+        NotValid(String, JsValue),
+    }
+    impl std::error::Error for VarError {}
+
+    impl std::fmt::Display for VarError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                VarError::NotPresent(s) => write!(f, "environment variable {:?} not found", s),
+                VarError::NotValid(k, v) => write!(
+                    f,
+                    "environment variable {:?} held non-string value {:?}",
+                    k, v
+                ),
+            }
+        }
+    }
+
+    pub fn var<K: AsRef<str>>(key: K) -> Result<String, VarError> {
+        let k = key.as_ref();
+        // Reflect::get throws TypeError if its first argument is not an object
+        let got = Reflect::get(&process.env(), &JsValue::from_str(k))
+            .expect("process env should be an object");
+        if got.is_undefined() {
+            Err(VarError::NotPresent(k.to_owned()))
+        } else {
+            got.as_string().ok_or(VarError::NotValid(k.to_owned(), got))
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod env {
+    pub use std::env::var;
+    pub use std::env::VarError;
+}
+
+#[cfg(target_arch = "wasm32")]
+pub mod file {
+    use js_sys::JsString;
+    use node_sys::fs;
+    use node_sys::Buffer as NodeBuf;
+    use std::io;
+    use std::io::BufReader;
+    use std::path::Path;
+
+    #[derive(Debug)]
+    pub struct JsError(String);
+
+    impl std::error::Error for JsError {}
+
+    impl std::fmt::Display for JsError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{:?}", self)
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Buffer(NodeBuf);
+
+    // impl io::Read for Buffer {
+    //     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+    //     }
+    // }
+
+    pub fn reader<P: AsRef<Path>>(path: P) -> io::Result<BufReader<io::Cursor<Vec<u8>>>> {
+        fs::read_file_sync(&JsString::from(path.as_ref().to_str().unwrap()), None)
+            .map(|b| BufReader::new(io::Cursor::new(b.to_vec())))
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, JsError(format!("{:?}", e))))
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod file {
+    use std::fs::File;
+    use std::io;
+    use std::io::BufReader;
+    use std::path::Path;
+
+    pub fn reader<P: AsRef<Path>>(path: P) -> io::Result<BufReader<File>> {
+        File::open(path).map(BufReader::new)
+    }
+}
+
 pub mod core {
-    use std::env;
+    use crate::env;
     pub fn getInput(key: &str) -> std::result::Result<String, env::VarError> {
         env::var(format!("INPUT_{}", key.replace(' ', "_").to_uppercase()))
     }
 
     pub fn setOutput(key: &str, val: &str) {
-        println!("::set-output {}={}", key, val);
+        log!("::set-output {}={}", key, val);
     }
 }
 
 pub mod github {
+    use crate::env;
+    use crate::file;
     use serde_json::Value as JsonValue;
-    use std::env;
     use std::error::Error;
-    use std::fs::File;
-    use std::io::BufReader;
 
     pub fn get_context_payload_magic() -> std::result::Result<JsonValue, Box<dyn Error>> {
         let path = env::var("GITHUB_EVENT_PATH")?;
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
+        let reader = file::reader(path)?;
         let event = serde_json::from_reader(reader)?;
         Ok(event)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
