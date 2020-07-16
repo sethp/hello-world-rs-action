@@ -4,6 +4,19 @@
 */
 export function main(): void;
 /**
+* The code to exit an action
+*/
+export enum ExitCode {
+/**
+* A code indicating that the action was successful.
+*/
+  Success,
+/**
+* A code indicating that the action was a failure.
+*/
+  Failure,
+}
+/**
 */
 export class AgentConstructorOptions {
   free(): void;
@@ -125,6 +138,22 @@ export class ConsoleConstructorOptions {
 * @returns {any}
 */
   stdout: any;
+}
+/**
+* Interface for cp options.
+*/
+export class CopyOptions {
+  free(): void;
+/**
+* Whether to overwrite existing files in the destination. Defaults to true.
+* @returns {boolean | undefined}
+*/
+  force?: boolean;
+/**
+* Whether to recursively copy all subdirectories. Defaults to false.
+* @returns {boolean | undefined}
+*/
+  recursive?: boolean;
 }
 /**
 */
@@ -322,6 +351,18 @@ export class GetNameOptions {
   port: number;
 }
 /**
+* Interface for getInput options
+*/
+export class InputOptions {
+  free(): void;
+/**
+* Whether the input is required. If required and not present, will throw. Defaults
+* to false.
+* @returns {boolean | undefined}
+*/
+  required?: boolean;
+}
+/**
 */
 export class MkdtempSyncOptions {
   free(): void;
@@ -337,6 +378,17 @@ export class MkdtempSyncOptions {
 * @returns {string | undefined}
 */
   encoding?: string;
+}
+/**
+* Interface for mv options.
+*/
+export class MoveOptions {
+  free(): void;
+/**
+* Whether to overwrite existing files in the destination. Defaults to true.
+* @returns {boolean | undefined}
+*/
+  force?: boolean;
 }
 /**
 */

@@ -19,6 +19,8 @@ try {
  */
 
 #[cfg(target_arch = "wasm32")]
+use js_sys::{JsString, Number};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
@@ -51,29 +53,23 @@ pub fn main() {
     console_error_panic_hook::set_once();
     if let Err(e) = run() {
         // TODO: what happens if an exception is thrown in a not-catch binding?
-        core::set_failed(format!("{}", e));
+        core::set_failed(&JsString::from(format!("{}", e)));
         process.exit(Some(1));
     }
 }
 
-#[derive(Debug)]
-pub struct StrError(String);
-
-impl Error for StrError {}
-
-impl std::fmt::Display for StrError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
 pub fn run() -> Result {
-    let name = core::get_input("who-to-greet")?;
-    log!("Hello {}!", name);
+    let name = core::get_input(&JsString::from("who-to-greet"), None);
+    log!("Hello {}!", String::from(name));
     let time = Utc::now().to_rfc3339();
-    core::set_output("time", &time);
-    let payload = serde_json::to_string_pretty(&github::get_context_payload_magic()?)?;
-    log!("The event payload: {}", payload);
+    core::set_output(&JsString::from("time"), &JsString::from(time));
+    let payload = js_sys::JSON::stringify_with_replacer_and_space(
+        &github::context.payload(),
+        &JsValue::UNDEFINED,
+        &Number::from(2),
+    )
+    .map_err(JsError)?;
+    log!("The event payload: {}", String::from(payload));
     Ok(())
 }
 
@@ -122,6 +118,17 @@ pub mod env {
     pub use std::env::VarError;
 }
 
+#[derive(Debug)]
+pub struct JsError(JsValue);
+
+impl std::error::Error for JsError {}
+
+impl std::fmt::Display for JsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 pub mod file {
     use js_sys::JsString;
@@ -145,11 +152,6 @@ pub mod file {
     #[derive(Debug)]
     pub struct Buffer(NodeBuf);
 
-    // impl io::Read for Buffer {
-    //     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-    //     }
-    // }
-
     pub fn reader<P: AsRef<Path>>(path: P) -> io::Result<BufReader<io::Cursor<Vec<u8>>>> {
         fs::read_file_sync(&JsString::from(path.as_ref().to_str().unwrap()), None)
             .map(|b| BufReader::new(io::Cursor::new(b.to_vec())))
@@ -169,6 +171,7 @@ pub mod file {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod core {
     use crate::env;
     pub fn get_input(key: &str) -> std::result::Result<String, env::VarError> {
@@ -184,16 +187,26 @@ pub mod core {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+pub mod core {
+    pub use actions_toolkit_sys::core::*;
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod github {
     use crate::env;
     use crate::file;
     use serde_json::Value as JsonValue;
     use std::error::Error;
-
     pub fn get_context_payload_magic() -> std::result::Result<JsonValue, Box<dyn Error>> {
         let path = env::var("GITHUB_EVENT_PATH")?;
         let reader = file::reader(path)?;
         let event = serde_json::from_reader(reader)?;
         Ok(event)
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub mod github {
+    pub use actions_toolkit_sys::github::*;
 }

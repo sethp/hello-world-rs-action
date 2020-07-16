@@ -2,3 +2,7 @@
 	path = node-sys
 	url = https://github.com/sethp/node-sys.git
 	branch = feat/read-file-sync
+[submodule "actions-toolkit-sys"]
+	path = actions-toolkit-sys
+	url = https://github.com/sethp/actions-toolkit-sys.git
+	branch = fix/github-context-bindings

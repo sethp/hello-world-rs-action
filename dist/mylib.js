@@ -1,14 +1,24 @@
 let imports = {};
 imports['__wbindgen_placeholder__'] = module.exports;
 let wasm;
-const { readFileSync } = require(String.raw`fs`);
+const { getInput, setOutput, setFailed } = require(String.raw`@actions/core`);
+const { context } = require(String.raw`@actions/github`);
 const { TextDecoder } = require(String.raw`util`);
 
 const heap = new Array(32).fill(undefined);
 
 heap.push(undefined, null, true, false);
 
-function getObject(idx) { return heap[idx]; }
+let heap_next = heap.length;
+
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
+}
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 
@@ -26,16 +36,7 @@ function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
 
-let heap_next = heap.length;
-
-function addHeapObject(obj) {
-    if (heap_next === heap.length) heap.push(heap.length + 1);
-    const idx = heap_next;
-    heap_next = heap[idx];
-
-    heap[idx] = obj;
-    return idx;
-}
+function getObject(idx) { return heap[idx]; }
 
 function dropObject(idx) {
     if (idx < 36) return;
@@ -150,17 +151,6 @@ module.exports.main = function() {
     wasm.main();
 };
 
-function handleError(f) {
-    return function () {
-        try {
-            return f.apply(this, arguments);
-
-        } catch (e) {
-            wasm.__wbindgen_exn_store(addHeapObject(e));
-        }
-    };
-}
-
 let stack_pointer = 32;
 
 function addBorrowedObject(obj) {
@@ -204,6 +194,29 @@ function getFloat64Memory0() {
     }
     return cachegetFloat64Memory0;
 }
+
+function handleError(f) {
+    return function () {
+        try {
+            return f.apply(this, arguments);
+
+        } catch (e) {
+            wasm.__wbindgen_exn_store(addHeapObject(e));
+        }
+    };
+}
+/**
+* The code to exit an action
+*/
+module.exports.ExitCode = Object.freeze({
+/**
+* A code indicating that the action was successful.
+*/
+Success:0,
+/**
+* A code indicating that the action was a failure.
+*/
+Failure:1, });
 /**
 */
 class AgentConstructorOptions {
@@ -546,6 +559,49 @@ class ConsoleConstructorOptions {
     }
 }
 module.exports.ConsoleConstructorOptions = ConsoleConstructorOptions;
+/**
+* Interface for cp options.
+*/
+class CopyOptions {
+
+    free() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        wasm.__wbg_copyoptions_free(ptr);
+    }
+    /**
+    * Whether to recursively copy all subdirectories. Defaults to false.
+    * @returns {boolean | undefined}
+    */
+    get recursive() {
+        var ret = wasm.__wbg_get_copyoptions_recursive(this.ptr);
+        return ret === 0xFFFFFF ? undefined : ret !== 0;
+    }
+    /**
+    * Whether to recursively copy all subdirectories. Defaults to false.
+    * @param {boolean | undefined} arg0
+    */
+    set recursive(arg0) {
+        wasm.__wbg_set_copyoptions_recursive(this.ptr, isLikeNone(arg0) ? 0xFFFFFF : arg0 ? 1 : 0);
+    }
+    /**
+    * Whether to overwrite existing files in the destination. Defaults to true.
+    * @returns {boolean | undefined}
+    */
+    get force() {
+        var ret = wasm.__wbg_get_copyoptions_force(this.ptr);
+        return ret === 0xFFFFFF ? undefined : ret !== 0;
+    }
+    /**
+    * Whether to overwrite existing files in the destination. Defaults to true.
+    * @param {boolean | undefined} arg0
+    */
+    set force(arg0) {
+        wasm.__wbg_set_copyoptions_force(this.ptr, isLikeNone(arg0) ? 0xFFFFFF : arg0 ? 1 : 0);
+    }
+}
+module.exports.CopyOptions = CopyOptions;
 /**
 */
 class CreateHookCallbacks {
@@ -1124,6 +1180,43 @@ class GetNameOptions {
 }
 module.exports.GetNameOptions = GetNameOptions;
 /**
+* Interface for getInput options
+*/
+class InputOptions {
+
+    static __wrap(ptr) {
+        const obj = Object.create(InputOptions.prototype);
+        obj.ptr = ptr;
+
+        return obj;
+    }
+
+    free() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        wasm.__wbg_inputoptions_free(ptr);
+    }
+    /**
+    * Whether the input is required. If required and not present, will throw. Defaults
+    * to false.
+    * @returns {boolean | undefined}
+    */
+    get required() {
+        var ret = wasm.__wbg_get_inputoptions_required(this.ptr);
+        return ret === 0xFFFFFF ? undefined : ret !== 0;
+    }
+    /**
+    * Whether the input is required. If required and not present, will throw. Defaults
+    * to false.
+    * @param {boolean | undefined} arg0
+    */
+    set required(arg0) {
+        wasm.__wbg_set_inputoptions_required(this.ptr, isLikeNone(arg0) ? 0xFFFFFF : arg0 ? 1 : 0);
+    }
+}
+module.exports.InputOptions = InputOptions;
+/**
 */
 class MkdtempSyncOptions {
 
@@ -1169,6 +1262,34 @@ class MkdtempSyncOptions {
     }
 }
 module.exports.MkdtempSyncOptions = MkdtempSyncOptions;
+/**
+* Interface for mv options.
+*/
+class MoveOptions {
+
+    free() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        wasm.__wbg_moveoptions_free(ptr);
+    }
+    /**
+    * Whether to overwrite existing files in the destination. Defaults to true.
+    * @returns {boolean | undefined}
+    */
+    get force() {
+        var ret = wasm.__wbg_get_moveoptions_force(this.ptr);
+        return ret === 0xFFFFFF ? undefined : ret !== 0;
+    }
+    /**
+    * Whether to overwrite existing files in the destination. Defaults to true.
+    * @param {boolean | undefined} arg0
+    */
+    set force(arg0) {
+        wasm.__wbg_set_moveoptions_force(this.ptr, isLikeNone(arg0) ? 0xFFFFFF : arg0 ? 1 : 0);
+    }
+}
+module.exports.MoveOptions = MoveOptions;
 /**
 */
 class NetServerOptions {
@@ -1941,9 +2062,9 @@ class WriteStream {
 }
 module.exports.WriteStream = WriteStream;
 
-module.exports.__wbindgen_is_undefined = function(arg0) {
-    var ret = getObject(arg0) === undefined;
-    return ret;
+module.exports.__wbindgen_number_new = function(arg0) {
+    var ret = arg0;
+    return addHeapObject(ret);
 };
 
 module.exports.__wbindgen_string_new = function(arg0, arg1) {
@@ -1976,17 +2097,40 @@ module.exports.__wbg_stack_558ba5917b466edd = function(arg0, arg1) {
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 };
 
+module.exports.__wbg_getInput_cf3a5ca4d177f5a5 = function(arg0, arg1) {
+    var ret = getInput(getObject(arg0), arg1 === 0 ? undefined : InputOptions.__wrap(arg1));
+    return addHeapObject(ret);
+};
+
+module.exports.__wbg_setOutput_f971f24c80bfcd34 = function(arg0, arg1) {
+    setOutput(getObject(arg0), getObject(arg1));
+};
+
+module.exports.__wbg_setFailed_93ab65e8953e2dee = function(arg0) {
+    setFailed(getObject(arg0));
+};
+
+module.exports.__wbg_payload_a639590ae3f3f70d = function(arg0) {
+    var ret = getObject(arg0).payload;
+    return addHeapObject(ret);
+};
+
+module.exports.__wbg_static_accessor_context_48d36000a5ef93d2 = function() {
+    var ret = context;
+    return addHeapObject(ret);
+};
+
 module.exports.__wbg_log_d85e484a8ba03c98 = function(arg0) {
     console.log(getObject(arg0));
 };
 
-module.exports.__wbg_readFileSync_3f84f286f0576910 = handleError(function(arg0, arg1) {
-    var ret = readFileSync(getObject(arg0), arg1 === 0 ? undefined : ReadFileSyncOptions.__wrap(arg1));
-    return addHeapObject(ret);
-});
-
 module.exports.__wbg_static_accessor_process_8ce5117b4a5688b8 = function() {
     var ret = process;
+    return addHeapObject(ret);
+};
+
+module.exports.__wbindgen_object_clone_ref = function(arg0) {
+    var ret = getObject(arg0);
     return addHeapObject(ret);
 };
 
@@ -2015,18 +2159,8 @@ module.exports.__wbg_prependOnceListener_c0e99b4c5407cce7 = function(arg0, arg1,
     return addHeapObject(ret);
 };
 
-module.exports.__wbindgen_object_clone_ref = function(arg0) {
-    var ret = getObject(arg0);
-    return addHeapObject(ret);
-};
-
 module.exports.__wbg_exit_8b603241d7db0931 = function(arg0, arg1, arg2) {
     getObject(arg0).exit(arg1 === 0 ? undefined : arg2);
-};
-
-module.exports.__wbg_env_8082220246d4efbb = function(arg0) {
-    var ret = getObject(arg0).env;
-    return addHeapObject(ret);
 };
 
 module.exports.__wbg_getTime_8e7a0578598e5039 = function(arg0) {
@@ -2039,27 +2173,8 @@ module.exports.__wbg_new0_8d817915cd890bd8 = function() {
     return addHeapObject(ret);
 };
 
-module.exports.__wbg_new_04793d2c09ba060f = function(arg0) {
-    var ret = new Uint8Array(getObject(arg0));
-    return addHeapObject(ret);
-};
-
-module.exports.__wbg_length_3acae3a5337e0257 = function(arg0) {
-    var ret = getObject(arg0).length;
-    return ret;
-};
-
-module.exports.__wbg_set_fdaef5653b2c1408 = function(arg0, arg1, arg2) {
-    getObject(arg0).set(getObject(arg1), arg2 >>> 0);
-};
-
-module.exports.__wbg_buffer_44855aefa83ea48c = function(arg0) {
-    var ret = getObject(arg0).buffer;
-    return addHeapObject(ret);
-};
-
-module.exports.__wbg_get_38f68ddea9e54820 = handleError(function(arg0, arg1) {
-    var ret = Reflect.get(getObject(arg0), getObject(arg1));
+module.exports.__wbg_stringify_e6cf6915a898c669 = handleError(function(arg0, arg1, arg2) {
+    var ret = JSON.stringify(getObject(arg0), getObject(arg1), getObject(arg2));
     return addHeapObject(ret);
 });
 
@@ -2082,11 +2197,6 @@ module.exports.__wbindgen_debug_string = function(arg0, arg1) {
 
 module.exports.__wbindgen_throw = function(arg0, arg1) {
     throw new Error(getStringFromWasm0(arg0, arg1));
-};
-
-module.exports.__wbindgen_memory = function() {
-    var ret = wasm.memory;
-    return addHeapObject(ret);
 };
 
 const path = require('path').join(__dirname, 'mylib_bg.wasm');
