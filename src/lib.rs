@@ -176,7 +176,7 @@ pub mod core {
     }
 
     pub fn set_output(key: &str, val: &str) {
-        log!("::set-output {}={}", key, val);
+        log!("::set-output name={}::{}", key, val);
     }
 
     pub fn set_failed<S: AsRef<str>>(message: S) {
