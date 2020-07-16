@@ -68,8 +68,8 @@ impl std::fmt::Display for StrError {
 }
 
 pub fn run() -> Result {
-    let nameToGreet = core::get_input("who-to-greet")?;
-    log!("Hello {}!", nameToGreet);
+    let name = core::get_input("who-to-greet")?;
+    log!("Hello {}!", name);
     let time = Utc::now().to_rfc3339();
     core::set_output("time", &time);
     let payload = serde_json::to_string_pretty(&github::get_context_payload_magic()?)?;
