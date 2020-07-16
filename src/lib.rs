@@ -1,6 +1,3 @@
-// TODO: convention for naming things across boundary?
-#![allow(non_snake_case)]
-
 use chrono::Utc;
 
 /*
@@ -25,6 +22,8 @@ try {
 use wasm_bindgen::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
+extern crate node_sys;
+#[cfg(target_arch = "wasm32")]
 extern crate web_sys;
 
 use std::error::Error;
@@ -45,24 +44,34 @@ macro_rules! log {
     }
 }
 
-// TODO: The `catch (error) { core.setFailed(..) }` is nearly implicit,
-// but the `::error::message` part is still to do
 #[cfg(target_arch = "wasm32")]
-// TODO: this segfaults on panic?
 #[wasm_bindgen]
 pub fn main() {
+    use node_sys::process;
     console_error_panic_hook::set_once();
     if let Err(e) = run() {
-        log!("Failed: {}", e)
-        // TODO exit 1
+        // TODO: what happens if an exception is thrown in a not-catch binding?
+        core::set_failed(format!("{}", e));
+        process.exit(Some(1));
+    }
+}
+
+#[derive(Debug)]
+pub struct StrError(String);
+
+impl Error for StrError {}
+
+impl std::fmt::Display for StrError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
 pub fn run() -> Result {
-    let nameToGreet = core::getInput("who-to-greet")?;
+    let nameToGreet = core::get_input("who-to-greet")?;
     log!("Hello {}!", nameToGreet);
     let time = Utc::now().to_rfc3339();
-    core::setOutput("time", &time);
+    core::set_output("time", &time);
     let payload = serde_json::to_string_pretty(&github::get_context_payload_magic()?)?;
     log!("The event payload: {}", payload);
     Ok(())
@@ -162,12 +171,16 @@ pub mod file {
 
 pub mod core {
     use crate::env;
-    pub fn getInput(key: &str) -> std::result::Result<String, env::VarError> {
+    pub fn get_input(key: &str) -> std::result::Result<String, env::VarError> {
         env::var(format!("INPUT_{}", key.replace(' ', "_").to_uppercase()))
     }
 
-    pub fn setOutput(key: &str, val: &str) {
+    pub fn set_output(key: &str, val: &str) {
         log!("::set-output {}={}", key, val);
+    }
+
+    pub fn set_failed<S: AsRef<str>>(message: S) {
+        log!("::error::{}", message.as_ref());
     }
 }
 

@@ -1976,6 +1976,10 @@ module.exports.__wbg_stack_558ba5917b466edd = function(arg0, arg1) {
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
 };
 
+module.exports.__wbg_log_d85e484a8ba03c98 = function(arg0) {
+    console.log(getObject(arg0));
+};
+
 module.exports.__wbg_readFileSync_3f84f286f0576910 = handleError(function(arg0, arg1) {
     var ret = readFileSync(getObject(arg0), arg1 === 0 ? undefined : ReadFileSyncOptions.__wrap(arg1));
     return addHeapObject(ret);
@@ -2016,13 +2020,13 @@ module.exports.__wbindgen_object_clone_ref = function(arg0) {
     return addHeapObject(ret);
 };
 
+module.exports.__wbg_exit_8b603241d7db0931 = function(arg0, arg1, arg2) {
+    getObject(arg0).exit(arg1 === 0 ? undefined : arg2);
+};
+
 module.exports.__wbg_env_8082220246d4efbb = function(arg0) {
     var ret = getObject(arg0).env;
     return addHeapObject(ret);
-};
-
-module.exports.__wbg_log_d85e484a8ba03c98 = function(arg0) {
-    console.log(getObject(arg0));
 };
 
 module.exports.__wbg_getTime_8e7a0578598e5039 = function(arg0) {
